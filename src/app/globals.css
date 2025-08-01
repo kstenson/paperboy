@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+}
+
+@layer components {
+  .google-reader-layout {
+    @apply flex h-screen bg-google-reader-bg dark:bg-google-reader-bg-dark text-google-reader-text dark:text-google-reader-text-dark;
+  }
+  
+  .sidebar {
+    @apply w-64 bg-google-reader-sidebar dark:bg-google-reader-sidebar-dark border-r border-google-reader-border dark:border-google-reader-border-dark;
+  }
+  
+  .article-list {
+    @apply w-96 border-r border-google-reader-border dark:border-google-reader-border-dark overflow-y-auto bg-google-reader-bg dark:bg-google-reader-bg-dark;
+  }
+  
+  .article-content {
+    @apply flex-1 overflow-y-auto bg-google-reader-bg dark:bg-google-reader-bg-dark;
+  }
+}

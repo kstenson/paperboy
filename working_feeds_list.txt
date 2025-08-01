@@ -1,0 +1,173 @@
+RSS Feed Audit - Working Feeds List
+========================================
+Generated: 2025-08-01 17:05:16
+Total working feeds: 36
+
+
+ENGINEERING (11 feeds)
+----------------------
+✓ Discord Blog
+  RSS: https://discord.com/blog/rss.xml
+  Web: https://discord.com
+
+✓ Netflix TechBlog - Medium
+  RSS: http://techblog.netflix.com/feeds/posts/default
+  Web: https://netflixtechblog.com?source=rss----2615bd06b42e---4
+
+✓ LeadDev
+  RSS: https://leaddev.com/content-piece-and-series/rss.xml
+  Web: https://leaddev.com/
+
+✓ The Beautiful Mess
+  RSS: https://cutlefish.substack.com/feed
+  Web: https://cutlefish.substack.com
+
+✓ Posts on Jack's home on the web
+  RSS: https://cep.dev/posts/index.xml
+  Web: https://cep.dev/posts/
+
+✓ Stories by Nitin Dhar on Medium
+  RSS: https://medium.com/feed/@nitindharny
+  Web: https://medium.com/@nitindharny?source=rss-13ffd8ca35a0------2
+
+✓ Spotify Engineering
+  RSS: http://labs.spotify.com/feed/
+  Web: https://engineering.atspotify.com/
+
+✓ Software Lead Weekly
+  RSS: https://swlw-rss.netlify.app/issues.rss
+  Web: https://softwareleadweekly.com
+
+✓ Jade Rubick
+  RSS: https://www.rubick.com/rss.xml
+  Web: https://www.rubick.com
+
+✓ Engineering at Slack
+  RSS: https://slack.engineering/feed
+  Web: https://slack.engineering
+
+✓ The latest from GitHub's engineering team - The GitHub Blog
+  RSS: http://githubengineering.com/atom.xml
+  Web: https://github.blog/engineering/
+
+
+LEADERSHIP (6 feeds)
+--------------------
+✓ Rands in Repose
+  RSS: https://randsinrepose.com/feed/
+  Web: https://randsinrepose.com
+
+✓ Developing Skills
+  RSS: https://developingskills.substack.com/feed
+  Web: https://read.developingskills.fyi
+
+✓ Geek | Manager
+  RSS: http://feeds.feedburner.com/GeekManager
+  Web: http://blog.geekmanager.co.uk
+
+✓ wardleymaps - Medium
+  RSS: https://medium.com/feed/wardleymaps
+  Web: https://medium.com/wardleymaps?source=rss----1e9b2b773fe1---4
+
+✓ Lenny's Newsletter
+  RSS: https://www.lennysnewsletter.com/feed/
+  Web: https://www.lennysnewsletter.com
+
+✓ JFDI
+  RSS: http://www.annashipman.co.uk/atom.xml
+  Web: https://www.annashipman.co.uk/
+
+
+MACHINE LEARNING (1 feeds)
+--------------------------
+✓ colah's blog
+  RSS: http://colah.github.io/rss.xml
+  Web: http://colah.github.io/
+
+
+STARTUPS (3 feeds)
+------------------
+✓ High Scalability
+  RSS: http://feeds.feedburner.com/HighScalability
+  Web: http://highscalability.com/blog/
+
+✓ Nathan Barry
+  RSS: http://feeds.feedburner.com/NathanBarry
+  Web: https://nathanbarry.com
+
+✓ A VC
+  RSS: http://feeds.feedburner.com/AVc
+  Web: https://avc.com/
+
+
+TECH (8 feeds)
+--------------
+✓ Citation Needed
+  RSS: https://www.citationneeded.news/rss/
+  Web: https://www.citationneeded.news/
+
+✓ Stratechery by Ben Thompson
+  RSS: http://stratechery.com/feed/
+  Web: https://stratechery.com
+
+✓ just about managing
+  RSS: https://justaboutmanaging.substack.com/feed
+  Web: https://justaboutmanaging.substack.com
+
+✓ Hardcore Software by Steven Sinofsky
+  RSS: https://hardcoresoftware.learningbyshipping.com/feed/
+  Web: https://hardcoresoftware.learningbyshipping.com
+
+✓ fd93
+  RSS: https://fd93.me/feeds/all.atom.xml
+  Web: https://fd93.me/
+
+✓ David Heinemeier Hansson
+  RSS: https://world.hey.com/dhh/feed.atom
+  Web: https://world.hey.com/dhh
+
+✓ ongoing by Tim Bray
+  RSS: http://www.tbray.org/ongoing/ongoing.atom
+  Web: https://www.tbray.org/ongoing/
+
+✓ Jason Fried
+  RSS: https://world.hey.com/jason/feed.atom
+  Web: https://world.hey.com/jason
+
+
+ZEN (3 feeds)
+-------------
+✓ Hardcore Zen | Hardcore Zen
+  RSS: http://hardcorezen.info/feed
+  Web: http://hardcorezen.info
+
+✓ Dogen Sangha Blog
+  RSS: http://gudoblog-e.blogspot.com/feeds/posts/default
+  Web: http://gudoblog-e.blogspot.com/
+
+✓ HARDCORE ZEN
+  RSS: http://hardcorezen.blogspot.com/feeds/posts/default
+  Web: http://hardcorezen.blogspot.com/
+
+
+LIFEHACK (3 feeds)
+------------------
+✓ The Blog of Author Tim Ferriss
+  RSS: http://www.fourhourworkweek.com/blog/feed/
+  Web: https://tim.blog/
+
+✓ IMPOSSIBLE ®
+  RSS: http://feeds.feedburner.com/BlogofImpossibleThings
+  Web: https://impossiblehq.com
+
+✓ Fluent in 3 months
+  RSS: http://feeds.feedburner.com/fluentin3months
+  Web: https://www.fluentin3months.com/
+
+
+LINKERS (1 feeds)
+-----------------
+✓ Reflective Perspective
+  RSS: http://feeds.feedburner.com/ReflectivePerspective
+  Web: https://blog.cwa.me.uk
+
