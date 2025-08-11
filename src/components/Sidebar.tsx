@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Rss, RefreshCw, CheckCheck, Upload, Download, Settings, ChevronUp, ChevronDown, Trash2, Moon, Sun } from 'lucide-react'
+import { Plus, Rss, RefreshCw, CheckCheck, Upload, Download, Settings, ChevronUp, ChevronDown, Trash2, Moon, Sun, Bookmark, Copy } from 'lucide-react'
 import { useState } from 'react'
 
 interface Feed {
@@ -24,11 +24,13 @@ interface SidebarProps {
   onClearAll: () => void
   isDarkMode: boolean
   onToggleDarkMode: () => void
+  autoFetchContent: boolean
+  onToggleAutoFetchContent: () => void
   isRefreshing?: boolean
   isImporting?: boolean
 }
 
-export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed, onRefreshFeeds, onMarkAllAsRead, onImportOPML, onExportOPML, onClearAll, isDarkMode, onToggleDarkMode, isRefreshing, isImporting }: SidebarProps) {
+export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed, onRefreshFeeds, onMarkAllAsRead, onImportOPML, onExportOPML, onClearAll, isDarkMode, onToggleDarkMode, autoFetchContent, onToggleAutoFetchContent, isRefreshing, isImporting }: SidebarProps) {
   const [isAddingFeed, setIsAddingFeed] = useState(false)
   const [feedUrl, setFeedUrl] = useState('')
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false)
@@ -53,6 +55,25 @@ export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed
     if (file) {
       onImportOPML(file)
       event.target.value = ''
+    }
+  }
+
+  const generateBookmarklet = () => {
+    const readerUrl = window.location.origin
+    // Create bookmarklet as a single line with proper escaping
+    const bookmarkletCode = `javascript:(function(){var url=window.location.href;var title=document.title;var overlay=document.createElement('div');overlay.id='rss-reader-overlay';overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;';var popup=document.createElement('div');popup.style.cssText='background:white;padding:20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:400px;text-align:center;';popup.innerHTML='<div style="margin-bottom:15px;"><div style="display:inline-block;width:20px;height:20px;border:2px solid %23ddd;border-top:2px solid %23007bff;border-radius:50%;animation:spin 1s linear infinite;"></div></div><div>Adding feed to RSS Reader...</div><style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>';overlay.appendChild(popup);document.body.appendChild(overlay);fetch('${readerUrl}/api/feeds/discover',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})}).then(function(response){return response.json();}).then(function(data){if(data.success){popup.innerHTML='<div style="color:%2328a745;margin-bottom:15px;font-size:18px;">✓</div><div style="margin-bottom:10px;">Feed '+(data.alreadyExists?'already exists':'added successfully')+'!</div><div style="font-size:14px;color:%23666;">'+(data.feed.title||title)+'</div><div style="margin-top:15px;"><button onclick="document.getElementById(\\'rss-reader-overlay\\').remove()" style="background:%23007bff;color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;">Close</button></div>';}else{popup.innerHTML='<div style="color:%23dc3545;margin-bottom:15px;font-size:18px;">✗</div><div style="margin-bottom:10px;">Failed to add feed</div><div style="font-size:14px;color:%23666;">'+(data.error||'Unknown error')+'</div><div style="margin-top:15px;"><button onclick="document.getElementById(\\'rss-reader-overlay\\').remove()" style="background:%23dc3545;color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;">Close</button></div>';}}).catch(function(error){popup.innerHTML='<div style="color:%23dc3545;margin-bottom:15px;font-size:18px;">✗</div><div style="margin-bottom:10px;">Network error</div><div style="font-size:14px;color:%23666;">Could not connect to RSS Reader</div><div style="margin-top:15px;"><button onclick="document.getElementById(\\'rss-reader-overlay\\').remove()" style="background:%23dc3545;color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;">Close</button></div>';});})();`
+    
+    return bookmarkletCode
+  }
+
+  const copyBookmarklet = async () => {
+    try {
+      await navigator.clipboard.writeText(generateBookmarklet())
+      // You could add a toast notification here if available
+      alert('Bookmarklet copied to clipboard!')
+    } catch (error) {
+      console.error('Failed to copy bookmarklet:', error)
+      alert('Failed to copy bookmarklet. Please copy it manually.')
     }
   }
 
@@ -193,7 +214,7 @@ export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed
               
               <div 
                 className={`transition-all duration-200 ease-in-out overflow-hidden ${
-                  isGeneralExpanded ? 'max-h-32 opacity-100 mt-2' : 'max-h-0 opacity-0'
+                  isGeneralExpanded ? 'max-h-48 opacity-100 mt-2' : 'max-h-0 opacity-0'
                 }`}
               >
                 {/* Dark Mode Toggle */}
@@ -208,6 +229,23 @@ export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                         isDarkMode ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Auto Fetch Content Toggle */}
+                <div className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Auto Fetch Full Content</span>
+                  <button
+                    onClick={onToggleAutoFetchContent}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      autoFetchContent ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        autoFetchContent ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
                   </button>
@@ -298,6 +336,35 @@ export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed
                     <Download className="w-5 h-5 mb-1" />
                     <span className="text-xs">Export</span>
                   </button>
+                </div>
+                
+                {/* Bookmarklet Section */}
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-600 mb-3">
+                  <div className="mb-2">
+                    <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Quick Add Bookmarklet</h5>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">
+                      Drag to your bookmarks bar or click to test on this page:
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <a
+                      href={generateBookmarklet()}
+                      className="flex-1 flex items-center justify-center gap-2 p-2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-800 transition-colors text-sm cursor-grab"
+                      title="Drag to bookmarks bar or click to test"
+                    >
+                      <Bookmark className="w-4 h-4" />
+                      Add to RSS Reader
+                    </a>
+                    
+                    <button
+                      onClick={copyBookmarklet}
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 transition-colors"
+                      title="Copy bookmarklet to clipboard"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Clear All Button */}

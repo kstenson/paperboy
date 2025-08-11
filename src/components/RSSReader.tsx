@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import ArticleList from './ArticleList'
 import ArticleContent from './ArticleContent'
@@ -30,7 +31,14 @@ interface Article {
   }
 }
 
-export default function RSSReader() {
+interface RSSReaderProps {
+  initialFeedId?: string
+  initialArticleId?: string
+}
+
+export default function RSSReader({ initialFeedId, initialArticleId }: RSSReaderProps = {}) {
+  const router = useRouter()
+  const pathname = usePathname()
   const [feeds, setFeeds] = useState<Feed[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [selectedFeedId, setSelectedFeedId] = useState<string | null>(null)
@@ -40,7 +48,7 @@ export default function RSSReader() {
   const [isImporting, setIsImporting] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [showClearAllDialog, setShowClearAllDialog] = useState(false)
-  const { isDarkMode, toggleDarkMode } = useTheme()
+  const { isDarkMode, toggleDarkMode, autoFetchContent, toggleAutoFetchContent } = useTheme()
 
   const addToast = (toast: Omit<Toast, 'id'>) => {
     const id = Date.now().toString()
@@ -135,10 +143,22 @@ export default function RSSReader() {
     setSelectedFeedId(feedId)
     setSelectedArticle(null)
     fetchArticles(feedId)
+    
+    // Update URL
+    if (feedId) {
+      router.push(`/feed/${feedId}`)
+    } else {
+      router.push('/')
+    }
   }
 
   const handleArticleSelect = async (article: Article) => {
     setSelectedArticle(article)
+    
+    // Update URL with article selection
+    if (selectedFeedId) {
+      router.push(`/feed/${selectedFeedId}/article/${article.id}`)
+    }
     
     if (!article.isRead) {
       try {
@@ -380,12 +400,39 @@ export default function RSSReader() {
     const loadData = async () => {
       setLoading(true)
       await fetchFeeds()
-      await fetchArticles()
+      
+      // Set initial feed selection
+      if (initialFeedId) {
+        setSelectedFeedId(initialFeedId)
+        await fetchArticles(initialFeedId)
+      } else {
+        await fetchArticles()
+      }
+      
       setLoading(false)
     }
     
     loadData()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialFeedId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle initial article selection
+  useEffect(() => {
+    if (initialArticleId && articles.length > 0) {
+      const article = articles.find(a => a.id === initialArticleId)
+      if (article) {
+        setSelectedArticle(article)
+        
+        // Mark as read if not already
+        if (!article.isRead) {
+          fetch(`/api/articles/${article.id}/read`, {
+            method: 'POST',
+          }).catch(error => {
+            console.error('Error marking article as read:', error)
+          })
+        }
+      }
+    }
+  }, [initialArticleId, articles])
 
   if (loading) {
     return (
@@ -415,6 +462,8 @@ export default function RSSReader() {
           onClearAll={handleClearAll}
           isDarkMode={isDarkMode}
           onToggleDarkMode={toggleDarkMode}
+          autoFetchContent={autoFetchContent}
+          onToggleAutoFetchContent={toggleAutoFetchContent}
           isRefreshing={isRefreshing}
           isImporting={isImporting}
         />
@@ -428,6 +477,7 @@ export default function RSSReader() {
         <ArticleContent 
           article={selectedArticle}
           onMarkAsRead={handleMarkAsRead}
+          autoFetchContent={autoFetchContent}
         />
       </div>
       
