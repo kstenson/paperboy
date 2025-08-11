@@ -4,11 +4,12 @@
   # Paperboy
 
   *A modern RSS reader built with Next.js, TypeScript, and SQLite, inspired by Google Reader's clean interface.*
-  
-  ## Why create this?
-  This project scratches two itches, how much can you vibe code apps using cursor and getting something up and running and also showing some love to the old internet of the RSS era where we had lots of little blogs not eaten up by big tech.
 
 </div>
+
+## Why create this?
+This project scratches two itches, how much can you vibe code apps using cursor and getting something up and running and also showing some love to the old internet of the RSS era where we had lots of little blogs not eaten up by big tech.
+
 
 ## Screenshots
 
