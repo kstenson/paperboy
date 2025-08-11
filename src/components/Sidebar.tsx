@@ -1,6 +1,7 @@
 'use client'
 
-import { Plus, Rss, RefreshCw, CheckCheck, Upload, Download, Settings, ChevronUp, ChevronDown, Trash2, Moon, Sun, Bookmark, Copy } from 'lucide-react'
+import { Plus, RefreshCw, CheckCheck, Upload, Download, Settings, ChevronUp, ChevronDown, Trash2, Moon, Sun, Bookmark, Copy } from 'lucide-react'
+import PaperboyLogo from './PaperboyLogo'
 import { useState } from 'react'
 
 interface Feed {
@@ -84,7 +85,7 @@ export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed
       {/* Header */}
       <div className="p-4 border-b border-google-reader-border dark:border-google-reader-border-dark">
         <h1 className="text-xl font-bold text-google-reader-primary flex items-center gap-2">
-          <Rss className="w-5 h-5" />
+          <PaperboyLogo className="w-5 h-5" />
           Paperboy
         </h1>
       </div>
