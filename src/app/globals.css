@@ -9,6 +9,12 @@
 }
 
 @layer components {
+  .pixelated {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+
   .google-reader-layout {
     @apply flex h-screen bg-google-reader-bg dark:bg-google-reader-bg-dark text-google-reader-text dark:text-google-reader-text-dark;
   }
