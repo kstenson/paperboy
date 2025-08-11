@@ -85,7 +85,7 @@ export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed
       {/* Header */}
       <div className="p-4 border-b border-google-reader-border dark:border-google-reader-border-dark">
         <h1 className="text-xl font-bold text-google-reader-primary flex items-center gap-2">
-          <PaperboyLogo className="w-8 h-8" />
+          <PaperboyLogo className="w-10 h-10" />
           Paperboy
         </h1>
       </div>

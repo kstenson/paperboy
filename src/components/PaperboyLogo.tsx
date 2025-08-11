@@ -4,7 +4,7 @@ interface PaperboyLogoProps {
   className?: string
 }
 
-export default function PaperboyLogo({ className = "w-8 h-8" }: PaperboyLogoProps) {
+export default function PaperboyLogo({ className = "w-10 h-10" }: PaperboyLogoProps) {
   return (
     <svg 
       viewBox="0 0 24 24" 
