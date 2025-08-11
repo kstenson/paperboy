@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     try {
       const directResponse = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; RSS Reader Bot)',
+          'User-Agent': 'Mozilla/5.0 (compatible; Paperboy Bot)',
           'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml'
         }
       })
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
           const feedUrl = `${baseUrl.origin}${path}`
           const feedResponse = await fetch(feedUrl, {
             headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; RSS Reader Bot)',
+              'User-Agent': 'Mozilla/5.0 (compatible; Paperboy Bot)',
               'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml'
             }
           })
@@ -149,7 +149,7 @@ async function addFeedToDatabase(feedUrl: string, feedContent?: string | null, t
     if (!feedContent) {
       const response = await fetch(feedUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; RSS Reader Bot)',
+          'User-Agent': 'Mozilla/5.0 (compatible; Paperboy Bot)',
           'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml'
         }
       })

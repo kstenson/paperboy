@@ -1,4 +1,4 @@
-# RSS Reader
+# Paperboy
 
 A modern RSS reader built with Next.js, TypeScript, and SQLite, inspired by Google Reader's clean interface.
 

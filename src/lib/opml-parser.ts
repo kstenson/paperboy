@@ -115,7 +115,7 @@ export function generateOPML(feeds: { title: string; url: string; description?: 
   let opml = `<?xml version="1.0" encoding="UTF-8"?>
 <opml version="1.0">
   <head>
-    <title>RSS Reader Subscriptions</title>
+    <title>Paperboy Subscriptions</title>
     <dateCreated>${now}</dateCreated>
     <dateModified>${now}</dateModified>
   </head>

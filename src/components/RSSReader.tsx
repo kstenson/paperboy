@@ -440,7 +440,7 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
         <div className="flex items-center justify-center w-full">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-google-reader-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading RSS Reader...</p>
+            <p className="text-gray-600">Loading Paperboy...</p>
           </div>
         </div>
       </div>

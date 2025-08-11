@@ -4,7 +4,7 @@ import { prisma } from './db'
 const parser = new Parser({
   timeout: 10000,
   headers: {
-    'User-Agent': 'RSS Reader App/1.0',
+    'User-Agent': 'Paperboy App/1.0',
   },
 })
 

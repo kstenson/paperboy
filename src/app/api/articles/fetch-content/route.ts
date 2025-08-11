@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     // Fetch the article page
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; RSS Reader Bot)'
+        'User-Agent': 'Mozilla/5.0 (compatible; Paperboy Bot)'
       }
     })
 

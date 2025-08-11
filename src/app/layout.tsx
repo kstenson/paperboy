@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'RSS Reader',
+  title: 'Paperboy',
   description: 'A Google Reader-inspired RSS reader',
 }
 
