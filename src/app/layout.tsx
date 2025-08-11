@@ -4,6 +4,15 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Paperboy',
   description: 'A Google Reader-inspired RSS reader',
+  icons: {
+    icon: [
+      { url: '/favicon.png', sizes: 'any', type: 'image/png' },
+      { url: '/favicon.ico', sizes: '16x16 32x32', type: 'image/x-icon' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 }
 
 export default function RootLayout({
