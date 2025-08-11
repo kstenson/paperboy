@@ -1,15 +1,38 @@
-# Paperboy
+<div align="center">
+  <img src="docs/img/paperboy%20logo.png" alt="Paperboy Logo" width="200" />
+  
+  # Paperboy
+  
+  *A modern RSS reader built with Next.js, TypeScript, and SQLite, inspired by Google Reader's clean interface.*
+</div>
 
-A modern RSS reader built with Next.js, TypeScript, and SQLite, inspired by Google Reader's clean interface.
+## Screenshots
+
+<table>
+  <tr>
+    <td>
+      <img src="docs/img/config.png" alt="Paperboy Light Mode" />
+      <p align="center"><em>Light mode with settings panel</em></p>
+    </td>
+    <td>
+      <img src="docs/img/darkmode.png" alt="Paperboy Dark Mode" />
+      <p align="center"><em>Dark mode interface</em></p>
+    </td>
+  </tr>
+</table>
 
 ## Features
 
 - 📖 **Clean Google Reader-inspired UI** - Three-panel layout with sidebar, article list, and content view
+- 🌙 **Dark/Light Mode** - Toggle between light and dark themes with system preference detection
 - 🗄️ **SQLite Database** - Local storage using Prisma ORM for feeds and articles
 - 🔄 **Automatic Updates** - Background refresh of feeds with manual refresh option
 - ✅ **Read/Unread Tracking** - Mark articles as read/unread with visual indicators
+- ⚙️ **Settings Panel** - Configurable options including auto-fetch content and theme preferences
 - 📱 **Responsive Design** - Works well on desktop and mobile devices
 - 🎨 **Tailwind CSS** - Modern styling with typography support for article content
+- 🔖 **OPML Support** - Import/export feed subscriptions in standard OPML format
+- 🚀 **URL Routing** - Deep linking to specific feeds and articles with browser back/forward support
 
 ## Getting Started
 
