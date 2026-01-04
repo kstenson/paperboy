@@ -1,19 +1,26 @@
 'use client'
 
 import { formatDistanceToNow } from 'date-fns'
-import { FileText, MessageSquare, ExternalLink } from 'lucide-react'
+import { FileText, MessageSquare, ExternalLink, Headphones } from 'lucide-react'
 
 interface Article {
   id: string
+  feedId: string
   title: string
   content: string
   url: string
   pubDate: Date
   isRead: boolean
+  createdAt: Date
   feed: {
     title: string
     url: string
   }
+  // Podcast fields
+  mediaType?: 'article' | 'podcast'
+  audioUrl?: string
+  transcript?: string
+  duration?: number
 }
 
 interface ArticleListProps {
@@ -27,38 +34,45 @@ export default function ArticleList({ articles, selectedArticleId, onArticleSele
     return html.replace(/<[^>]*>/g, '').substring(0, 150) + (html.length > 150 ? '...' : '')
   }
 
-  const getContentType = (content: string) => {
-    const textContent = content.replace(/<[^>]*>/g, '').trim()
+  const getContentType = (article: Article) => {
+    // Check if it's a podcast first
+    if (article.mediaType === 'podcast') {
+      return 'podcast'
+    }
+
+    const textContent = article.content.replace(/<[^>]*>/g, '').trim()
     const wordCount = textContent.split(/\s+/).filter(word => word.length > 0).length
-    
+
     // Check for common truncation indicators at the end of content
     const endsWithTruncation = /(\.\.\.|read\s+more|continue\s+reading|view\s+full|see\s+more|full\s+post)[\s\S]*$/i.test(textContent.slice(-100))
-    
+
     // Check for very obvious link-only indicators
-    const isLinkOnly = wordCount < 30 || 
+    const isLinkOnly = wordCount < 30 ||
       /^(read\s+more|full\s+article|view\s+original|continue\s+reading)/i.test(textContent.trim()) ||
       textContent.length < 200
-    
+
     if (isLinkOnly) {
       return 'link'
     }
-    
+
     // If content ends with truncation indicators and is under 200 words, it's likely a summary
     if (endsWithTruncation && wordCount < 200) {
       return 'summary'
     }
-    
+
     // Full article: Longer content (> 150 words) without clear truncation
     if (wordCount > 150 && !endsWithTruncation) {
       return 'full'
     }
-    
+
     // Summary: Medium length content (30-150 words) or content with truncation indicators
     return 'summary'
   }
 
   const getContentIcon = (contentType: string) => {
     switch (contentType) {
+      case 'podcast':
+        return <Headphones className="w-3 h-3 text-purple-500 dark:text-purple-400" />
       case 'full':
         return <FileText className="w-3 h-3 text-green-500 dark:text-green-400" />
       case 'summary':
@@ -72,6 +86,8 @@ export default function ArticleList({ articles, selectedArticleId, onArticleSele
 
   const getContentTypeLabel = (contentType: string) => {
     switch (contentType) {
+      case 'podcast':
+        return 'Podcast Episode'
       case 'full':
         return 'Full Article'
       case 'summary':
@@ -103,7 +119,7 @@ export default function ArticleList({ articles, selectedArticleId, onArticleSele
       
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {articles.map((article) => {
-          const contentType = getContentType(article.content)
+          const contentType = getContentType(article)
           return (
             <div
               key={article.id}

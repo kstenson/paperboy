@@ -3,18 +3,27 @@
 import { ExternalLink, Eye, EyeOff, MessageCircle, FileText, Loader } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useState, useEffect } from 'react'
+import { fetchArticleContent } from '../lib/articleContentFetcher'
+import AudioPlayer from './AudioPlayer'
 
 interface Article {
   id: string
+  feedId: string
   title: string
   content: string
   url: string
   pubDate: Date
   isRead: boolean
+  createdAt: Date
   feed: {
     title: string
     url: string
   }
+  // Podcast fields
+  mediaType?: 'article' | 'podcast'
+  audioUrl?: string
+  transcript?: string
+  duration?: number
 }
 
 interface ArticleContentProps {
@@ -144,17 +153,9 @@ export default function ArticleContent({ article, onMarkAsRead, autoFetchContent
     setFetchError(null)
     
     try {
-      const response = await fetch('/api/articles/fetch-content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: article.url }),
-      })
+      const result = await fetchArticleContent(article.url)
       
-      const result = await response.json()
-      
-      if (response.ok && result.success) {
+      if (result.success) {
         setFetchedContent({
           title: result.title,
           content: result.content
@@ -236,8 +237,19 @@ export default function ArticleContent({ article, onMarkAsRead, autoFetchContent
           <span>{formatDistanceToNow(new Date(article.pubDate), { addSuffix: true })}</span>
         </div>
       </div>
-      
+
       <div className="p-6">
+        {/* Podcast Audio Player */}
+        {article.mediaType === 'podcast' && article.audioUrl && (
+          <div className="mb-6">
+            <AudioPlayer
+              audioUrl={article.audioUrl}
+              title={article.title}
+              duration={article.duration}
+            />
+          </div>
+        )}
+
         {fetchError && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
             <p className="text-red-700 dark:text-red-400 text-sm">
@@ -245,7 +257,7 @@ export default function ArticleContent({ article, onMarkAsRead, autoFetchContent
             </p>
           </div>
         )}
-        
+
         {fetchedContent && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
             <p className="text-blue-700 dark:text-blue-400 text-sm flex items-center gap-2">
@@ -254,13 +266,36 @@ export default function ArticleContent({ article, onMarkAsRead, autoFetchContent
             </p>
           </div>
         )}
-        
-        <div 
-          className="prose prose-gray dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ 
-            __html: fetchedContent ? fetchedContent.content : article.content 
-          }}
-        />
+
+        {/* Podcast Transcript Section */}
+        {article.mediaType === 'podcast' && article.transcript && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">Transcript</h2>
+            <div
+              className="prose prose-gray dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: article.transcript }}
+            />
+          </div>
+        )}
+
+        {/* Podcast without transcript message */}
+        {article.mediaType === 'podcast' && !article.transcript && (
+          <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded">
+            <p className="text-purple-700 dark:text-purple-400 text-sm">
+              No transcript available for this episode.
+            </p>
+          </div>
+        )}
+
+        {/* Regular article content */}
+        {article.mediaType !== 'podcast' && (
+          <div
+            className="prose prose-gray dark:prose-invert max-w-none"
+            dangerouslySetInnerHTML={{
+              __html: fetchedContent ? fetchedContent.content : article.content
+            }}
+          />
+        )}
       </div>
     </div>
   )

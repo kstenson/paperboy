@@ -8,23 +8,17 @@ import ArticleContent from './ArticleContent'
 import ToastContainer, { Toast } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useTheme } from '../contexts/ThemeContext'
+import * as clientRss from '../lib/clientRssParser'
+import { StoredFeed, StoredArticle } from '../lib/storage'
+import { updateLastVisitTime } from '../lib/dateFilters'
 
-interface Feed {
-  id: string
-  title: string
-  url: string
+interface Feed extends StoredFeed {
   _count: {
     articles: number
   }
 }
 
-interface Article {
-  id: string
-  title: string
-  content: string
-  url: string
-  pubDate: Date
-  isRead: boolean
+interface Article extends StoredArticle {
   feed: {
     title: string
     url: string
@@ -62,11 +56,7 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
   const fetchFeeds = async () => {
     try {
       console.log('Fetching feeds...')
-      const response = await fetch('/api/feeds')
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      const data = await response.json()
+      const data = clientRss.getAllFeeds()
       console.log('Feeds fetched:', data.length, 'feeds')
       setFeeds(data)
     } catch (error) {
@@ -81,13 +71,24 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
 
   const fetchArticles = async (feedId?: string | null) => {
     try {
-      const url = feedId ? `/api/articles?feedId=${feedId}` : '/api/articles'
-      console.log('Fetching articles from:', url)
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      const data = await response.json()
+      console.log('Fetching articles for feedId:', feedId)
+      const rawArticles = feedId ? clientRss.getFeedArticles(feedId) : clientRss.getAllArticles()
+
+      // Get fresh feed data directly instead of relying on state
+      const currentFeeds = clientRss.getAllFeeds()
+
+      // Convert to the expected format with feed information
+      const data = rawArticles.map(article => {
+        const feed = currentFeeds.find(f => f.id === article.feedId)
+        return {
+          ...article,
+          feed: {
+            title: feed?.title || 'Unknown Feed',
+            url: feed?.url || ''
+          }
+        }
+      })
+
       console.log('Articles fetched:', data.length, 'articles')
       setArticles(data)
     } catch (error) {
@@ -103,19 +104,8 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
   const handleAddFeed = async (url: string) => {
     try {
       console.log('Adding feed:', url)
-      const response = await fetch('/api/feeds', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
-      })
       
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to add feed')
-      }
-      
+      await clientRss.addFeed(url)
       console.log('Feed added successfully, refreshing data...')
       
       // Refresh feeds and articles
@@ -144,27 +134,27 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
     setSelectedArticle(null)
     fetchArticles(feedId)
     
-    // Update URL
+    // Update URL hash for client-side routing
     if (feedId) {
-      router.push(`/feed/${feedId}`)
+      window.location.hash = `feed=${feedId}`
     } else {
-      router.push('/')
+      window.location.hash = ''
     }
   }
 
   const handleArticleSelect = async (article: Article) => {
     setSelectedArticle(article)
     
-    // Update URL with article selection
+    // Update URL hash with article selection
     if (selectedFeedId) {
-      router.push(`/feed/${selectedFeedId}/article/${article.id}`)
+      window.location.hash = `feed=${selectedFeedId}&article=${article.id}`
+    } else {
+      window.location.hash = `article=${article.id}`
     }
     
     if (!article.isRead) {
       try {
-        await fetch(`/api/articles/${article.id}/read`, {
-          method: 'POST',
-        })
+        clientRss.markArticleAsRead(article.id, true)
         
         setArticles(prev => prev.map(a => 
           a.id === article.id ? { ...a, isRead: true } : a
@@ -181,21 +171,17 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
 
   const handleMarkAsRead = async (articleId: string, isRead: boolean) => {
     try {
-      const response = await fetch(`/api/articles/${articleId}/read`, {
-        method: isRead ? 'POST' : 'DELETE',
-      })
+      clientRss.markArticleAsRead(articleId, isRead)
       
-      if (response.ok) {
-        setArticles(prev => prev.map(a => 
-          a.id === articleId ? { ...a, isRead } : a
-        ))
-        
-        if (selectedArticle?.id === articleId) {
-          setSelectedArticle(prev => prev ? { ...prev, isRead } : null)
-        }
-        
-        await fetchFeeds()
+      setArticles(prev => prev.map(a => 
+        a.id === articleId ? { ...a, isRead } : a
+      ))
+      
+      if (selectedArticle?.id === articleId) {
+        setSelectedArticle(prev => prev ? { ...prev, isRead } : null)
       }
+      
+      await fetchFeeds()
     } catch (error) {
       console.error('Error updating article read status:', error)
     }
@@ -204,9 +190,7 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
   const handleRefreshFeeds = async () => {
     setIsRefreshing(true)
     try {
-      await fetch('/api/feeds/update', {
-        method: 'POST',
-      })
+      await clientRss.updateAllFeeds()
       
       await fetchFeeds()
       await fetchArticles(selectedFeedId)
@@ -220,13 +204,9 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
   const handleMarkAllAsRead = async (feedId?: string) => {
     try {
       if (feedId) {
-        await fetch(`/api/feeds/${feedId}/mark-read`, {
-          method: 'POST',
-        })
+        clientRss.markAllFeedArticlesAsRead(feedId)
       } else {
-        await fetch('/api/articles/mark-all-read', {
-          method: 'POST',
-        })
+        clientRss.markAllArticlesAsRead()
       }
       
       await fetchFeeds()
@@ -254,57 +234,42 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
     })
     
     try {
-      const formData = new FormData()
-      formData.append('opmlFile', file)
+      const text = await file.text()
+      const result = await clientRss.importOPML(text)
       
-      const response = await fetch('/api/feeds/import-opml', {
-        method: 'POST',
-        body: formData,
+      const successMessage = `${result.success} feeds added successfully`
+      const failMessage = result.failed > 0 ? ` (${result.failed} failed)` : ''
+      
+      // Force refresh the data
+      console.log('Import successful, refreshing data...')
+      
+      // First refresh feeds
+      await fetchFeeds()
+      
+      // Then refresh articles for current view
+      await fetchArticles(selectedFeedId)
+      
+      // Show success toast
+      addToast({
+        type: 'success',
+        title: 'OPML Import Completed',
+        message: successMessage + failMessage,
+        duration: 6000
       })
       
-      const result = await response.json()
-      
-      if (response.ok) {
-        const successMessage = `${result.success} feeds added successfully`
-        const failMessage = result.failed > 0 ? ` (${result.failed} failed)` : ''
-        
-        // Force refresh the data
-        console.log('Import successful, refreshing data...')
-        
-        // First refresh feeds
-        await fetchFeeds()
-        
-        // Then refresh articles for current view
-        await fetchArticles(selectedFeedId)
-        
-        // Show success toast
-        addToast({
-          type: 'success',
-          title: 'OPML Import Completed',
-          message: successMessage + failMessage,
-          duration: 6000
-        })
-        
-        // Show individual error toasts for failed imports
-        if (result.errors.length > 0 && result.errors.length <= 3) {
-          result.errors.forEach((error: string) => {
-            addToast({
-              type: 'error',
-              title: 'Import Warning',
-              message: error,
-              duration: 8000
-            })
+      // Show individual error toasts for failed imports
+      if (result.errors.length > 0 && result.errors.length <= 3) {
+        result.errors.forEach((error: string) => {
+          addToast({
+            type: 'error',
+            title: 'Import Warning',
+            message: error,
+            duration: 8000
           })
-        }
-        
-        console.log('Data refresh completed after import')
-      } else {
-        addToast({
-          type: 'error',
-          title: 'Import Failed',
-          message: result.error
         })
       }
+      
+      console.log('Data refresh completed after import')
     } catch (error) {
       console.error('Error importing OPML:', error)
       addToast({
@@ -319,32 +284,22 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
 
   const handleExportOPML = async () => {
     try {
-      const response = await fetch('/api/feeds/export-opml')
+      const opmlContent = clientRss.exportOPML()
+      const blob = new Blob([opmlContent], { type: 'text/xml' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'rss-subscriptions.opml'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
       
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'rss-subscriptions.opml'
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-        
-        addToast({
-          type: 'success',
-          title: 'Export Successful',
-          message: 'OPML file has been downloaded successfully'
-        })
-      } else {
-        const error = await response.json()
-        addToast({
-          type: 'error',
-          title: 'Export Failed',
-          message: error.error
-        })
-      }
+      addToast({
+        type: 'success',
+        title: 'Export Successful',
+        message: 'OPML file has been downloaded successfully'
+      })
     } catch (error) {
       console.error('Error exporting OPML:', error)
       addToast({
@@ -361,31 +316,19 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
 
   const handleConfirmClearAll = async () => {
     try {
-      const response = await fetch('/api/feeds/clear-all', {
-        method: 'DELETE',
+      clientRss.clearAllFeeds()
+      
+      // Clear local state
+      setFeeds([])
+      setArticles([])
+      setSelectedFeedId(null)
+      setSelectedArticle(null)
+      
+      addToast({
+        type: 'success',
+        title: 'All Subscriptions Cleared',
+        message: 'All feeds and articles have been removed successfully'
       })
-      
-      const result = await response.json()
-      
-      if (response.ok) {
-        // Clear local state
-        setFeeds([])
-        setArticles([])
-        setSelectedFeedId(null)
-        setSelectedArticle(null)
-        
-        addToast({
-          type: 'success',
-          title: 'All Subscriptions Cleared',
-          message: result.message
-        })
-      } else {
-        addToast({
-          type: 'error',
-          title: 'Clear Failed',
-          message: result.error || 'Failed to clear all subscriptions'
-        })
-      }
     } catch (error) {
       console.error('Error clearing all subscriptions:', error)
       addToast({
@@ -397,22 +340,66 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
   }
 
   useEffect(() => {
+    const parseUrlHash = () => {
+      if (typeof window === 'undefined') return { feedId: null, articleId: null }
+      
+      const hash = window.location.hash.slice(1) // Remove the #
+      const params = new URLSearchParams(hash)
+      
+      return {
+        feedId: params.get('feed'),
+        articleId: params.get('article')
+      }
+    }
+    
     const loadData = async () => {
       setLoading(true)
       await fetchFeeds()
       
+      // Parse URL hash or use props
+      const urlParams = parseUrlHash()
+      const targetFeedId = initialFeedId || urlParams.feedId
+      const targetArticleId = initialArticleId || urlParams.articleId
+      
       // Set initial feed selection
-      if (initialFeedId) {
-        setSelectedFeedId(initialFeedId)
-        await fetchArticles(initialFeedId)
+      if (targetFeedId) {
+        setSelectedFeedId(targetFeedId)
+        await fetchArticles(targetFeedId)
       } else {
         await fetchArticles()
       }
+      
+      // Set initial article selection if specified
+      if (targetArticleId) {
+        // Will be handled by the existing article selection effect
+      }
+      
+      // Update last visited time
+      updateLastVisitTime()
       
       setLoading(false)
     }
     
     loadData()
+    
+    // Listen for hash changes
+    const handleHashChange = () => {
+      const { feedId, articleId } = parseUrlHash()
+      
+      if (feedId !== selectedFeedId) {
+        setSelectedFeedId(feedId)
+        fetchArticles(feedId)
+        setSelectedArticle(null)
+      }
+      
+      // Article selection will be handled by finding in current articles
+    }
+    
+    window.addEventListener('hashchange', handleHashChange)
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange)
+    }
   }, [initialFeedId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle initial article selection
@@ -424,11 +411,11 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
         
         // Mark as read if not already
         if (!article.isRead) {
-          fetch(`/api/articles/${article.id}/read`, {
-            method: 'POST',
-          }).catch(error => {
+          try {
+            clientRss.markArticleAsRead(article.id, true)
+          } catch (error) {
             console.error('Error marking article as read:', error)
-          })
+          }
         }
       }
     }
