@@ -3,6 +3,7 @@
 import { Plus, RefreshCw, CheckCheck, Upload, Download, Settings, ChevronUp, ChevronDown, Trash2, Moon, Sun, Bookmark, Copy } from 'lucide-react'
 import Image from 'next/image'
 import { useState } from 'react'
+import GitHubSyncSettings from './GitHubSyncSettings'
 
 interface Feed {
   id: string
@@ -23,6 +24,7 @@ interface SidebarProps {
   onImportOPML: (file: File) => void
   onExportOPML: () => void
   onClearAll: () => void
+  onGitHubSync: () => Promise<void>
   isDarkMode: boolean
   onToggleDarkMode: () => void
   autoFetchContent: boolean
@@ -31,12 +33,13 @@ interface SidebarProps {
   isImporting?: boolean
 }
 
-export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed, onRefreshFeeds, onMarkAllAsRead, onImportOPML, onExportOPML, onClearAll, isDarkMode, onToggleDarkMode, autoFetchContent, onToggleAutoFetchContent, isRefreshing, isImporting }: SidebarProps) {
+export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed, onRefreshFeeds, onMarkAllAsRead, onImportOPML, onExportOPML, onClearAll, onGitHubSync, isDarkMode, onToggleDarkMode, autoFetchContent, onToggleAutoFetchContent, isRefreshing, isImporting }: SidebarProps) {
   const [isAddingFeed, setIsAddingFeed] = useState(false)
   const [feedUrl, setFeedUrl] = useState('')
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false)
   const [isGeneralExpanded, setIsGeneralExpanded] = useState(true)
   const [isFeedManagementExpanded, setIsFeedManagementExpanded] = useState(true)
+  const [isGitHubSyncExpanded, setIsGitHubSyncExpanded] = useState(false)
 
   const handleAddFeed = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -201,9 +204,9 @@ export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed
           </button>
           
           {/* Collapsible Settings Content */}
-          <div 
-            className={`transition-all duration-300 ease-in-out overflow-hidden ${
-              isSettingsExpanded ? 'max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'
+          <div
+            className={`transition-all duration-300 ease-in-out ${
+              isSettingsExpanded ? 'max-h-[32rem] opacity-100 overflow-y-auto' : 'max-h-0 opacity-0 overflow-hidden'
             }`}
           >
             {/* General Section */}
@@ -390,8 +393,31 @@ export default function Sidebar({ feeds, selectedFeedId, onFeedSelect, onAddFeed
                 )}
               </div>
             </div>
+
+            {/* GitHub Sync Section */}
+            <div className="mb-4">
+              <button
+                onClick={() => setIsGitHubSyncExpanded(!isGitHubSyncExpanded)}
+                className="w-full flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              >
+                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">GitHub Sync</h4>
+                {isGitHubSyncExpanded ? (
+                  <ChevronDown className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+                ) : (
+                  <ChevronUp className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+                )}
+              </button>
+
+              <div
+                className={`transition-all duration-200 ease-in-out overflow-hidden ${
+                  isGitHubSyncExpanded ? 'max-h-[48rem] opacity-100 mt-2' : 'max-h-0 opacity-0'
+                }`}
+              >
+                <GitHubSyncSettings onSync={onGitHubSync} />
+              </div>
+            </div>
           </div>
-          
+
           {/* Status text - Always visible */}
           <div className="text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400">

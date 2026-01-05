@@ -9,8 +9,9 @@ import ToastContainer, { Toast } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useTheme } from '../contexts/ThemeContext'
 import * as clientRss from '../lib/clientRssParser'
-import { StoredFeed, StoredArticle } from '../lib/storage'
+import { StoredFeed, StoredArticle, storage } from '../lib/storage'
 import { updateLastVisitTime } from '../lib/dateFilters'
+import { githubSync } from '../lib/githubSync'
 
 interface Feed extends StoredFeed {
   _count: {
@@ -317,13 +318,13 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
   const handleConfirmClearAll = async () => {
     try {
       clientRss.clearAllFeeds()
-      
+
       // Clear local state
       setFeeds([])
       setArticles([])
       setSelectedFeedId(null)
       setSelectedArticle(null)
-      
+
       addToast({
         type: 'success',
         title: 'All Subscriptions Cleared',
@@ -336,6 +337,59 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
         title: 'Clear Error',
         message: 'Failed to clear all subscriptions. Please try again.'
       })
+    }
+  }
+
+  const handleGitHubSync = async () => {
+    try {
+      // Get current feeds
+      const localFeeds = storage.getAllFeeds()
+
+      // First, push local feeds to gist
+      await githubSync.pushFeeds(localFeeds)
+
+      // Then pull feeds from gist and merge
+      const gistFeeds = await githubSync.pullFeeds()
+
+      // Add any feeds from gist that don't exist locally
+      let addedCount = 0
+      for (const gistFeed of gistFeeds) {
+        const exists = localFeeds.some(f => f.url === gistFeed.url)
+        if (!exists) {
+          try {
+            await clientRss.addFeed(gistFeed.url)
+            addedCount++
+          } catch (error) {
+            console.error(`Failed to add feed ${gistFeed.url}:`, error)
+          }
+        }
+      }
+
+      // Refresh local data
+      await fetchFeeds()
+      await fetchArticles(selectedFeedId)
+
+      if (addedCount > 0) {
+        addToast({
+          type: 'success',
+          title: 'Sync Completed',
+          message: `Synced with GitHub. ${addedCount} new feed${addedCount !== 1 ? 's' : ''} added from gist.`
+        })
+      } else {
+        addToast({
+          type: 'success',
+          title: 'Sync Completed',
+          message: 'All feeds are in sync with GitHub.'
+        })
+      }
+    } catch (error) {
+      console.error('Error syncing with GitHub:', error)
+      addToast({
+        type: 'error',
+        title: 'Sync Failed',
+        message: error instanceof Error ? error.message : 'Failed to sync with GitHub'
+      })
+      throw error // Re-throw so the UI component can handle it
     }
   }
 
@@ -437,7 +491,7 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
   return (
     <>
       <div className="google-reader-layout">
-        <Sidebar 
+        <Sidebar
           feeds={feeds}
           selectedFeedId={selectedFeedId}
           onFeedSelect={handleFeedSelect}
@@ -447,6 +501,7 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
           onImportOPML={handleImportOPML}
           onExportOPML={handleExportOPML}
           onClearAll={handleClearAll}
+          onGitHubSync={handleGitHubSync}
           isDarkMode={isDarkMode}
           onToggleDarkMode={toggleDarkMode}
           autoFetchContent={autoFetchContent}
