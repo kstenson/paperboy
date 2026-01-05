@@ -1,17 +1,11 @@
-import { StoredFeed } from './storage'
+import { StoredFeed } from '../../storage'
+import { SyncProvider, SyncFeed } from '../syncProvider'
 
 const GIST_FILENAME = 'paperboy-feeds.json'
 const GIST_DESCRIPTION = 'Paperboy RSS Reader - Feed Subscriptions'
 
-export interface GistFeed {
-  url: string
-  title: string
-  description?: string
-  addedAt: string
-}
-
 export interface GistData {
-  feeds: GistFeed[]
+  feeds: SyncFeed[]
   version: string
   lastUpdated: string
 }
@@ -21,9 +15,15 @@ export interface GitHubConfig {
   gistId?: string
 }
 
-class GitHubSyncService {
+class GitHubSyncProvider implements SyncProvider {
+  name = 'GitHub Gist'
   private config: GitHubConfig | null = null
   private readonly STORAGE_KEY = 'paperboy-github-config'
+
+  constructor() {
+    // Auto-load config on initialization
+    this.loadConfig()
+  }
 
   // Load saved config from localStorage
   loadConfig(): GitHubConfig | null {
@@ -74,7 +74,7 @@ class GitHubSyncService {
   }
 
   // Create a new gist with feed data
-  async createGist(feeds: StoredFeed[], token: string): Promise<string> {
+  private async createGist(feeds: StoredFeed[], token: string): Promise<string> {
     const gistData: GistData = {
       feeds: feeds.map(feed => ({
         url: feed.url,
@@ -114,7 +114,7 @@ class GitHubSyncService {
   }
 
   // Update existing gist with new feed data
-  async updateGist(gistId: string, feeds: StoredFeed[], token: string): Promise<void> {
+  private async updateGist(gistId: string, feeds: StoredFeed[], token: string): Promise<void> {
     const gistData: GistData = {
       feeds: feeds.map(feed => ({
         url: feed.url,
@@ -149,7 +149,7 @@ class GitHubSyncService {
   }
 
   // Fetch gist data
-  async fetchGist(gistId: string, token: string): Promise<GistData> {
+  private async fetchGist(gistId: string, token: string): Promise<GistData> {
     const response = await fetch(`https://api.github.com/gists/${gistId}`, {
       headers: {
         'Authorization': `token ${token}`,
@@ -172,8 +172,13 @@ class GitHubSyncService {
     return JSON.parse(fileContent)
   }
 
-  // Push feeds to gist (create or update)
-  async pushFeeds(feeds: StoredFeed[]): Promise<void> {
+  // SyncProvider interface implementation
+
+  isConfigured(): boolean {
+    return !!(this.config?.token && this.config?.gistId)
+  }
+
+  async push(feeds: StoredFeed[]): Promise<void> {
     if (!this.config?.token) {
       throw new Error('GitHub token not configured')
     }
@@ -189,8 +194,7 @@ class GitHubSyncService {
     }
   }
 
-  // Pull feeds from gist
-  async pullFeeds(): Promise<GistFeed[]> {
+  async pull(): Promise<SyncFeed[]> {
     if (!this.config?.token || !this.config?.gistId) {
       throw new Error('GitHub sync not configured')
     }
@@ -199,9 +203,12 @@ class GitHubSyncService {
     return gistData.feeds
   }
 
-  // Check if sync is configured
-  isConfigured(): boolean {
-    return !!(this.config?.token && this.config?.gistId)
+  async sync(localFeeds: StoredFeed[]): Promise<SyncFeed[]> {
+    // Push local feeds first
+    await this.push(localFeeds)
+
+    // Then pull and return remote feeds
+    return await this.pull()
   }
 
   // Get current config
@@ -210,4 +217,4 @@ class GitHubSyncService {
   }
 }
 
-export const githubSync = new GitHubSyncService()
+export const githubProvider = new GitHubSyncProvider()

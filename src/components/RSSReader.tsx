@@ -8,10 +8,12 @@ import ArticleContent from './ArticleContent'
 import ToastContainer, { Toast } from './Toast'
 import ConfirmDialog from './ConfirmDialog'
 import { useTheme } from '../contexts/ThemeContext'
+import * as syncedRss from '../lib/syncedRssParser'
 import * as clientRss from '../lib/clientRssParser'
-import { StoredFeed, StoredArticle, storage } from '../lib/storage'
+import { StoredFeed, StoredArticle } from '../lib/storage'
 import { updateLastVisitTime } from '../lib/dateFilters'
-import { githubSync } from '../lib/githubSync'
+import { syncManager } from '../lib/sync/syncManager'
+import { githubProvider } from '../lib/sync/providers/githubProvider'
 
 interface Feed extends StoredFeed {
   _count: {
@@ -44,6 +46,11 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
   const [toasts, setToasts] = useState<Toast[]>([])
   const [showClearAllDialog, setShowClearAllDialog] = useState(false)
   const { isDarkMode, toggleDarkMode, autoFetchContent, toggleAutoFetchContent } = useTheme()
+
+  // Register sync providers on mount
+  useEffect(() => {
+    syncManager.registerProvider(githubProvider)
+  }, [])
 
   const addToast = (toast: Omit<Toast, 'id'>) => {
     const id = Date.now().toString()
@@ -105,20 +112,20 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
   const handleAddFeed = async (url: string) => {
     try {
       console.log('Adding feed:', url)
-      
-      await clientRss.addFeed(url)
+
+      await syncedRss.addFeed(url) // This automatically syncs
       console.log('Feed added successfully, refreshing data...')
-      
+
       // Refresh feeds and articles
       await fetchFeeds()
       await fetchArticles(selectedFeedId)
-      
+
       addToast({
         type: 'success',
         title: 'Feed Added',
         message: 'RSS feed has been added successfully!'
       })
-      
+
       console.log('Data refresh completed after adding feed')
     } catch (error) {
       console.error('Error adding feed:', error)
@@ -236,20 +243,20 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
     
     try {
       const text = await file.text()
-      const result = await clientRss.importOPML(text)
-      
+      const result = await syncedRss.importOPML(text) // This automatically syncs
+
       const successMessage = `${result.success} feeds added successfully`
       const failMessage = result.failed > 0 ? ` (${result.failed} failed)` : ''
-      
+
       // Force refresh the data
       console.log('Import successful, refreshing data...')
-      
+
       // First refresh feeds
       await fetchFeeds()
-      
+
       // Then refresh articles for current view
       await fetchArticles(selectedFeedId)
-      
+
       // Show success toast
       addToast({
         type: 'success',
@@ -257,7 +264,7 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
         message: successMessage + failMessage,
         duration: 6000
       })
-      
+
       // Show individual error toasts for failed imports
       if (result.errors.length > 0 && result.errors.length <= 3) {
         result.errors.forEach((error: string) => {
@@ -269,7 +276,7 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
           })
         })
       }
-      
+
       console.log('Data refresh completed after import')
     } catch (error) {
       console.error('Error importing OPML:', error)
@@ -317,7 +324,7 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
 
   const handleConfirmClearAll = async () => {
     try {
-      clientRss.clearAllFeeds()
+      syncedRss.clearAllFeeds() // This automatically syncs
 
       // Clear local state
       setFeeds([])
@@ -342,26 +349,15 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
 
   const handleGitHubSync = async () => {
     try {
-      // Get current feeds
-      const localFeeds = storage.getAllFeeds()
+      // Use the sync manager's manual sync
+      const result = await syncedRss.manualSync()
 
-      // First, push local feeds to gist
-      await githubSync.pushFeeds(localFeeds)
-
-      // Then pull feeds from gist and merge
-      const gistFeeds = await githubSync.pullFeeds()
-
-      // Add any feeds from gist that don't exist locally
-      let addedCount = 0
-      for (const gistFeed of gistFeeds) {
-        const exists = localFeeds.some(f => f.url === gistFeed.url)
-        if (!exists) {
-          try {
-            await clientRss.addFeed(gistFeed.url)
-            addedCount++
-          } catch (error) {
-            console.error(`Failed to add feed ${gistFeed.url}:`, error)
-          }
+      // Add any new feeds from sync providers
+      for (const newFeed of result.newFeeds) {
+        try {
+          await clientRss.addFeed(newFeed.url)
+        } catch (error) {
+          console.error(`Failed to add feed ${newFeed.url}:`, error)
         }
       }
 
@@ -369,25 +365,36 @@ export default function RSSReader({ initialFeedId, initialArticleId }: RSSReader
       await fetchFeeds()
       await fetchArticles(selectedFeedId)
 
-      if (addedCount > 0) {
-        addToast({
-          type: 'success',
-          title: 'Sync Completed',
-          message: `Synced with GitHub. ${addedCount} new feed${addedCount !== 1 ? 's' : ''} added from gist.`
+      // Show results
+      if (result.errors.length > 0) {
+        result.errors.forEach(err => {
+          addToast({
+            type: 'error',
+            title: `${err.provider} Sync Failed`,
+            message: err.message
+          })
         })
-      } else {
+      }
+
+      if (result.newFeeds.length > 0) {
         addToast({
           type: 'success',
           title: 'Sync Completed',
-          message: 'All feeds are in sync with GitHub.'
+          message: `${result.newFeeds.length} new feed${result.newFeeds.length !== 1 ? 's' : ''} added from sync.`
+        })
+      } else if (result.errors.length === 0) {
+        addToast({
+          type: 'success',
+          title: 'Sync Completed',
+          message: 'All feeds are in sync.'
         })
       }
     } catch (error) {
-      console.error('Error syncing with GitHub:', error)
+      console.error('Error syncing:', error)
       addToast({
         type: 'error',
         title: 'Sync Failed',
-        message: error instanceof Error ? error.message : 'Failed to sync with GitHub'
+        message: error instanceof Error ? error.message : 'Failed to sync'
       })
       throw error // Re-throw so the UI component can handle it
     }

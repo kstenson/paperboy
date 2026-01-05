@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Github, Check, X, RefreshCw, LogOut, ExternalLink } from 'lucide-react'
-import { githubSync } from '../lib/githubSync'
+import { githubProvider } from '../lib/sync/providers/githubProvider'
 
 interface GitHubSyncSettingsProps {
   onSync: () => void
@@ -18,7 +18,7 @@ export default function GitHubSyncSettings({ onSync }: GitHubSyncSettingsProps) 
   const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
-    const config = githubSync.loadConfig()
+    const config = githubProvider.loadConfig()
     if (config) {
       setIsConnected(true)
       setGistId(config.gistId || '')
@@ -37,13 +37,13 @@ export default function GitHubSyncSettings({ onSync }: GitHubSyncSettingsProps) 
 
     try {
       // Test token validity
-      const isValid = await githubSync.testToken(token)
+      const isValid = await githubProvider.testToken(token)
       if (!isValid) {
         throw new Error('Invalid GitHub token')
       }
 
       // Save config
-      githubSync.saveConfig({ token, gistId: gistId || undefined })
+      githubProvider.saveConfig({ token, gistId: gistId || undefined })
       setIsConnected(true)
       setSuccess('Connected to GitHub successfully!')
       setToken('') // Clear token from input for security
@@ -55,7 +55,7 @@ export default function GitHubSyncSettings({ onSync }: GitHubSyncSettingsProps) 
   }
 
   const handleDisconnect = () => {
-    githubSync.clearConfig()
+    githubProvider.clearConfig()
     setIsConnected(false)
     setToken('')
     setGistId('')
