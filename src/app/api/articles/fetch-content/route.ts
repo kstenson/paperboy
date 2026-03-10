@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { JSDOM } from 'jsdom'
+import { validateArticleUrl, ValidationError } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json()
-    
+
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 })
     }
 
+    // Validate and sanitize URL to prevent SSRF
+    const validatedUrl = validateArticleUrl(url)
+
     // Fetch the article page
-    const response = await fetch(url, {
+    const response = await fetch(validatedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; Paperboy Bot)'
       }
@@ -106,6 +110,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching article content:', error)
+
+    if (error instanceof ValidationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch article content' },
       { status: 500 }

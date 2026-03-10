@@ -1,32 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { JSDOM } from 'jsdom'
 import { prisma } from '@/lib/db'
-
-// Add CORS headers for bookmarklet requests
-function addCorsHeaders(response: NextResponse) {
-  response.headers.set('Access-Control-Allow-Origin', '*')
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  return response
-}
-
-export async function OPTIONS(request: NextRequest) {
-  return addCorsHeaders(new NextResponse(null, { status: 200 }))
-}
+import { validateFeedUrl, ValidationError } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json()
-    
+
     if (!url) {
-      return addCorsHeaders(NextResponse.json({ error: 'URL is required' }, { status: 400 }))
+      return NextResponse.json({ error: 'URL is required' }, { status: 400 })
     }
 
-    console.log('Discovering feeds for:', url)
+    // Validate and sanitize URL to prevent SSRF
+    const validatedUrl = validateFeedUrl(url)
+
+    console.log('Discovering feeds for:', validatedUrl)
 
     // First, try the URL directly as an RSS feed
     try {
-      const directResponse = await fetch(url, {
+      const directResponse = await fetch(validatedUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; Paperboy Bot)',
           'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml'
@@ -38,7 +30,7 @@ export async function POST(request: NextRequest) {
         if (content.includes('<rss') || content.includes('<feed') || content.includes('<channel')) {
           // This URL is already an RSS feed
           console.log('Direct RSS feed found')
-          return await addFeedToDatabase(url, content)
+          return await addFeedToDatabase(validatedUrl, content)
         }
       }
     } catch (error) {
@@ -46,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // If not a direct RSS feed, fetch the HTML page and look for feed links
-    const response = await fetch(url, {
+    const response = await fetch(validatedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; RSS Reader Bot)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -54,9 +46,9 @@ export async function POST(request: NextRequest) {
     })
 
     if (!response.ok) {
-      return addCorsHeaders(NextResponse.json({ 
-        error: `Failed to fetch page: ${response.status}` 
-      }, { status: response.status }))
+      return NextResponse.json({
+        error: `Failed to fetch page: ${response.status}`
+      }, { status: response.status })
     }
 
     const html = await response.text()
@@ -75,7 +67,7 @@ export async function POST(request: NextRequest) {
       
       if (href) {
         // Convert relative URLs to absolute
-        const feedUrl = new URL(href, url).toString()
+        const feedUrl = new URL(href, validatedUrl).toString()
         discoveredFeeds.push({ url: feedUrl, title })
       }
     }
@@ -85,7 +77,7 @@ export async function POST(request: NextRequest) {
     if (discoveredFeeds.length === 0) {
       // Try common RSS feed paths
       const commonPaths = ['/rss', '/rss.xml', '/feed', '/feed.xml', '/atom.xml', '/feeds/all.atom.xml']
-      const baseUrl = new URL(url)
+      const baseUrl = new URL(validatedUrl)
       
       for (const path of commonPaths) {
         try {
@@ -111,9 +103,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (discoveredFeeds.length === 0) {
-      return addCorsHeaders(NextResponse.json({ 
-        error: 'No RSS or Atom feeds found on this page' 
-      }, { status: 404 }))
+      return NextResponse.json({
+        error: 'No RSS or Atom feeds found on this page'
+      }, { status: 404 })
     }
 
     // Add the first discovered feed to the database
@@ -122,10 +114,18 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error discovering feeds:', error)
-    return addCorsHeaders(NextResponse.json(
+
+    if (error instanceof ValidationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
       { error: 'Failed to discover feeds' },
       { status: 500 }
-    ))
+    )
   }
 }
 
@@ -137,12 +137,12 @@ async function addFeedToDatabase(feedUrl: string, feedContent?: string | null, t
     })
 
     if (existingFeed) {
-      return addCorsHeaders(NextResponse.json({ 
+      return NextResponse.json({
         success: true,
         message: 'Feed already exists',
         feed: existingFeed,
         alreadyExists: true
-      }))
+      })
     }
 
     // If we don't have the feed content, fetch it
@@ -181,12 +181,12 @@ async function addFeedToDatabase(feedUrl: string, feedContent?: string | null, t
       }
     })
 
-    return addCorsHeaders(NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Feed added successfully',
       feed,
       alreadyExists: false
-    }))
+    })
 
   } catch (error) {
     console.error('Error adding feed to database:', error)

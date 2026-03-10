@@ -1,5 +1,6 @@
 import Parser from 'rss-parser'
 import { prisma } from './db'
+import { logger } from './logger'
 
 const parser = new Parser({
   timeout: 10000,
@@ -40,7 +41,7 @@ export async function parseFeedUrl(url: string): Promise<ParsedFeed> {
       })),
     }
   } catch (error) {
-    console.error('Error parsing RSS feed:', error)
+    logger.error('Error parsing RSS feed', error)
     throw new Error(`Failed to parse RSS feed: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
@@ -71,7 +72,7 @@ export async function addFeed(url: string) {
     
     return feed
   } catch (error) {
-    console.error('Error adding feed:', error)
+    logger.error('Error adding feed', error)
     throw error
   }
 }
@@ -109,24 +110,39 @@ export async function updateFeed(feedId: string) {
 }
 
 async function addArticlesFromFeed(feedId: string, articles: ParsedArticle[], feedUrl: string) {
-  for (const article of articles) {
-    if (!article.link) continue
-    
-    const existingArticle = await prisma.article.findUnique({
-      where: { url: article.link }
+  // Filter out articles without links
+  const validArticles = articles.filter(article => article.link)
+
+  if (validArticles.length === 0) return
+
+  // Get all existing article URLs in a single query to avoid N+1 problem
+  const articleUrls = validArticles.map(article => article.link)
+  const existingArticles = await prisma.article.findMany({
+    where: {
+      url: { in: articleUrls }
+    },
+    select: { url: true }
+  })
+
+  const existingUrlsSet = new Set(existingArticles.map(a => a.url))
+
+  // Filter out articles that already exist
+  const newArticles = validArticles
+    .filter(article => !existingUrlsSet.has(article.link))
+    .map(article => ({
+      feedId,
+      title: article.title,
+      content: article.content,
+      url: article.link,
+      pubDate: article.pubDate,
+    }))
+
+  // Batch insert all new articles
+  if (newArticles.length > 0) {
+    await prisma.article.createMany({
+      data: newArticles,
+      skipDuplicates: true,
     })
-    
-    if (!existingArticle) {
-      await prisma.article.create({
-        data: {
-          feedId,
-          title: article.title,
-          content: article.content,
-          url: article.link,
-          pubDate: article.pubDate,
-        }
-      })
-    }
   }
 }
 
