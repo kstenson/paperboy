@@ -34,6 +34,8 @@ model Article {
   createdAt DateTime @default(now())
   feed      Feed     @relation(fields: [feedId], references: [id], onDelete: Cascade)
 
+  @@index([feedId, pubDate])
+  @@index([isRead, pubDate])
   @@map("articles")
 }
 
