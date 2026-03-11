@@ -1,0 +1,125 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-metadata:
+    name: PR Metadata Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const validPrefixes = ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'chore', 'ci'];
+            const hasValidPrefix = validPrefixes.some(prefix =>
+              title.toLowerCase().startsWith(prefix + ':') ||
+              title.toLowerCase().startsWith(prefix + '(')
+            );
+
+            if (!hasValidPrefix && !title.includes('[skip-check]')) {
+              core.setFailed(
+                `PR title should start with one of: ${validPrefixes.join(', ')}\n` +
+                `Example: "feat: add new feature" or "fix(api): resolve bug"\n` +
+                `Add [skip-check] to title to bypass this check.`
+              );
+            }
+
+  file-size-check:
+    name: Check File Sizes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for large files
+        run: |
+          echo "Checking for files larger than 1MB..."
+          large_files=$(find . -type f -size +1M -not -path "*/node_modules/*" -not -path "*/.next/*" -not -path "*/.git/*" -not -path "*/public/*" || true)
+
+          if [ -n "$large_files" ]; then
+            echo "⚠️  Warning: Large files detected:"
+            echo "$large_files"
+            echo ""
+            echo "Consider:"
+            echo "- Compressing images (see OPTIMIZE_IMAGES.md)"
+            echo "- Using Git LFS for binary files"
+            echo "- Excluding from repository if not needed"
+          else
+            echo "✅ No large files detected"
+          fi
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for TODO/FIXME comments
+        run: |
+          echo "Checking for TODO/FIXME comments in new/modified files..."
+          todos=$(git diff origin/main...HEAD | grep -i "TODO\|FIXME" || true)
+          if [ -n "$todos" ]; then
+            echo "ℹ️  Found TODO/FIXME comments:"
+            echo "$todos"
+          fi
+
+      - name: Check for console.log statements
+        run: |
+          echo "Checking for console.log statements in new/modified files..."
+          # Check TypeScript/JavaScript files, excluding logger.ts and test files
+          console_logs=$(git diff origin/main...HEAD --name-only | \
+            grep -E '\.(ts|tsx|js|jsx)$' | \
+            grep -v 'logger.ts' | \
+            xargs grep -n "console\.(log\|warn\|error\|info\|debug)" 2>/dev/null || true)
+
+          if [ -n "$console_logs" ]; then
+            echo "⚠️  Warning: console.log statements found. Consider using the logger utility:"
+            echo "$console_logs"
+            echo ""
+            echo "Use 'logger.info()', 'logger.error()', etc. instead."
+          else
+            echo "✅ No console.log statements found"
+          fi
+
+  dependency-check:
+    name: Dependency Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Check for new dependencies
+        run: |
+          git diff origin/main...HEAD package.json | grep "^\+" | grep -E '".*":' || echo "No new dependencies"
+
+      - name: Audit dependencies
+        run: |
+          npm audit --audit-level=moderate || true
+          echo ""
+          echo "Run 'npm audit fix' locally to fix vulnerabilities"
